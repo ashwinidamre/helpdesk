@@ -37,7 +37,8 @@ export default function Dashboard({ user }: Props) {
 
   async function handleLogout() {
     await api.post("/auth/logout", {});
-    queryClient.clear();
+    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
+    queryClient.setQueryData(["me"], null);
   }
 
   return (
