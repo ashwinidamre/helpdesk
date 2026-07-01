@@ -2,9 +2,10 @@
   "name": "helpdesk",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["server", "client"],
+  "workspaces": ["server", "client", "auth-server"],
   "scripts": {
     "dev:server": "bun run --cwd server dev",
-    "dev:client": "bun run --cwd client dev"
+    "dev:client": "bun run --cwd client dev",
+    "dev:auth": "bun run --cwd auth-server dev"
   }
 }
