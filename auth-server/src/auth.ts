@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 
@@ -8,6 +9,17 @@ export const auth = betterAuth({
   database: new Pool({
     connectionString: process.env.DATABASE_URL,
   }),
+  databaseHooks: {
+    user: {
+      create: {
+        before: async () => {
+          throw new APIError("BAD_REQUEST", {
+            message: "Signup is disabled",
+          });
+        },
+      },
+    },
+  },
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3001",
   basePath: "/auth",
   secret: process.env.BETTER_AUTH_SECRET,
