@@ -62,6 +62,7 @@ Copy `.env.example` to `server/.env` before starting the server:
 DATABASE_URL="postgresql://user:password@localhost:5432/helpdesk"
 CLIENT_URL="http://localhost:5173"
 NODE_ENV="development"
+EMAIL_WEBHOOK_SECRET="change-me"   # shared secret required by POST /api/email/inbound
 ```
 
 ## Architecture
@@ -71,9 +72,17 @@ This is a Bun workspace monorepo with two packages: `server/` and `client/`.
 ### Server (`server/`) — Express + Prisma + Bun
 
 - Entry: `src/index.ts` → imports `src/app.ts` and calls `.listen()`
-- Routes mounted at `/api/auth`, `/api/tickets`, `/api/users`, `/api/health`
-- **Auth**: DB-backed sessions stored in the `Session` table. `createSession` writes a `session_id` httpOnly cookie (7-day expiry). `requireAuth` / `requireAdmin` middleware in `src/middleware/requireAuth.ts` read that cookie, look up the session, and attach `req.user`.
+- Routes mounted at `/api/auth`, `/api/tickets`, `/api/users`, `/api/email`, `/api/health`
+- **Auth**: DB-backed sessions stored in the `Session` table. Session helpers (`createSession`, `getSession`, `deleteSession`) live in `src/lib/session.ts`; middleware (`requireAuth`, `requireAdmin`) lives in `src/middleware/requireAuth.ts`.
+  - Passwords are hashed with **bcryptjs** (`bcrypt.compare` on login against `User.password`).
+  - `createSession` generates a `crypto.randomUUID()` session id, inserts a `Session` row (`userId`, `expiresAt` = now + 7 days), and sets it as the `session_id` cookie: `httpOnly`, `sameSite: "lax"`, `secure` only when `NODE_ENV === "production"`, `expires` matching the DB row.
+  - `getSession` reads the `session_id` cookie, loads the session with its `user` relation, and treats a missing/expired session as unauthenticated — expired rows are deleted on read (lazy cleanup, no cron job).
+  - `requireAuth` calls `getSession`; on failure responds `401 { error: "Unauthorized" }`, otherwise attaches `req.user` (a full Prisma `User`, typed via a `declare global { namespace Express { interface Request { user?: User } } }` augmentation in `requireAuth.ts`).
+  - `requireAdmin` does the same but additionally checks `session.user.role === "ADMIN"`, responding `403 { error: "Forbidden" }` for non-admins.
+  - `deleteSession` (used by logout) deletes the `Session` row for the cookie's id (ignores errors if already gone) and clears the cookie.
+  - There is no token refresh/rotation — the cookie and DB row share the same fixed 7-day expiry set at login.
 - **Database**: Single `PrismaClient` instance exported from `src/lib/db.ts`. Schema lives in `prisma/schema.prisma`.
+- **Inbound email**: `POST /api/email/inbound` converts a support email into a `Ticket`. Provider-agnostic — accepts a JSON body of `{ from, subject, text|body }` (any inbound-email webhook provider such as Resend Inbound or SendGrid Inbound Parse can be pointed at it after mapping its payload to this shape). Protected by a shared secret rather than session auth: the `verifyEmailWebhook` middleware (`src/middleware/verifyEmailWebhook.ts`) requires the `X-Webhook-Secret` header to match `EMAIL_WEBHOOK_SECRET`; the route 500s if that env var is unset. Parsing lives in `src/lib/parseInboundEmail.ts` — `parseSender` extracts an email/name pair from a raw `From` header (`"Jane Doe <jane@example.com>"` or a bare address), and `parseInboundEmail` requires a sender and a non-empty body, defaulting a missing subject to `"(no subject)"`. The route does not set `status` or `category` explicitly — every email-created ticket gets the schema default `status: OPEN` and `category: null` (AI classification is a separate, not-yet-implemented step; the `Ticket` model and `TicketStatus`/`TicketCategory` enums themselves predate this route and are unchanged by it).
 
 #### API surface
 
@@ -88,7 +97,9 @@ This is a Bun workspace monorepo with two packages: `server/` and `client/`.
 | `POST` | `/api/tickets/:id/reply` | `requireAuth` | Create reply; auto-sets ticket status to `RESOLVED` in a transaction |
 | `GET` | `/api/users` | `requireAdmin` | List all users (id, name, email, role, createdAt) |
 | `POST` | `/api/users` | `requireAdmin` | Create new agent (always `AGENT` role) |
-| `DELETE` | `/api/users/:id` | `requireAdmin` | Delete user |
+| `PATCH` | `/api/users/:id` | `requireAdmin` | Update `name`/`email`; updates `password` only if provided |
+| `DELETE` | `/api/users/:id` | `requireAdmin` | Soft-deletes user (sets `deletedAt`, revokes sessions); 403 if target is `ADMIN` |
+| `POST` | `/api/email/inbound` | `verifyEmailWebhook` | Converts an inbound support email into a `Ticket` |
 | `GET` | `/api/health` | — | Returns `{ status: "ok" }` |
 
 ### Client (`client/`) — React 18 + Vite + TanStack Query
@@ -106,15 +117,14 @@ This is a Bun workspace monorepo with two packages: `server/` and `client/`.
 | `/login` | `Login` | Redirects to `/dashboard` if already authed |
 | `/dashboard` | `Dashboard` | Requires auth |
 | `/tickets/:id` | `TicketDetail` | Requires auth |
+| `/users` | `Users` | Requires auth + `ADMIN` role (non-admins redirected to `/dashboard`) |
 | `*` | — | Redirects to `/dashboard` or `/login` |
-
-> `/admin/agents` is linked from `Dashboard` for ADMIN users but has no route defined yet.
 
 ### Data model
 
 | Model | Key fields |
 |---|---|
-| `User` | `id` (cuid), `name`, `email` (unique), bcrypt `password`, `role: ADMIN \| AGENT` |
+| `User` | `id` (cuid), `name`, `email` (unique), bcrypt `password`, `role: ADMIN \| AGENT`, `deletedAt?` (soft delete — excluded from `GET /api/users`, blocked from login, `ADMIN` role cannot be deleted) |
 | `Session` | `id` (UUID), `userId`, `expiresAt` — set as cookie |
 | `Ticket` | `subject`, `body`, `senderEmail`, `senderName?`, `status`, `category?`, `aiSummary?`, optional `assignedToId` |
 | `Reply` | `body`, `ticketId` — no userId, replies are anonymous agent replies; cascades on ticket delete |
