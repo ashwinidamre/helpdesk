@@ -113,3 +113,98 @@ describe("PATCH /api/tickets/:id — assignedToId validation", () => {
     });
   });
 });
+
+describe("PATCH /api/tickets/:id — status validation", () => {
+  const handler = getHandler("patch", "/:id");
+
+  beforeEach(() => {
+    mockDb.ticket.update.mockReset();
+  });
+
+  test("rejects a status value outside the TicketStatus enum", async () => {
+    const req = { params: { id: "ticket-1" }, body: { status: "ARCHIVED" } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid status" });
+    expect(mockDb.ticket.update).not.toHaveBeenCalled();
+  });
+
+  test.each(["OPEN", "RESOLVED", "CLOSED"])("accepts a valid status %s", async (status) => {
+    mockDb.ticket.update.mockResolvedValue({ id: "ticket-1", status });
+    const req = { params: { id: "ticket-1" }, body: { status } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(mockDb.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { status },
+    });
+    expect(res.status).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH /api/tickets/:id — category validation", () => {
+  const handler = getHandler("patch", "/:id");
+
+  beforeEach(() => {
+    mockDb.ticket.update.mockReset();
+  });
+
+  test("rejects a category value outside the TicketCategory enum", async () => {
+    const req = { params: { id: "ticket-1" }, body: { category: "BILLING" } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid category" });
+    expect(mockDb.ticket.update).not.toHaveBeenCalled();
+  });
+
+  test("accepts a valid category", async () => {
+    mockDb.ticket.update.mockResolvedValue({ id: "ticket-1", category: "TECHNICAL_QUESTION" });
+    const req = {
+      params: { id: "ticket-1" },
+      body: { category: "TECHNICAL_QUESTION" },
+    } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(mockDb.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { category: "TECHNICAL_QUESTION" },
+    });
+  });
+
+  test("allows clearing category back to null", async () => {
+    mockDb.ticket.update.mockResolvedValue({ id: "ticket-1", category: null });
+    const req = { params: { id: "ticket-1" }, body: { category: null } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(mockDb.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { category: null },
+    });
+  });
+
+  test("leaves category untouched when omitted from the body", async () => {
+    mockDb.ticket.update.mockResolvedValue({ id: "ticket-1", status: "OPEN" });
+    const req = { params: { id: "ticket-1" }, body: { status: "OPEN" } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(mockDb.ticket.update).toHaveBeenCalledWith({
+      where: { id: "ticket-1" },
+      data: { status: "OPEN" },
+    });
+  });
+});

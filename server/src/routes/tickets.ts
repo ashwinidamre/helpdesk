@@ -7,6 +7,13 @@ const router = Router();
 
 router.use(requireAuth);
 
+const TICKET_STATUSES: TicketStatus[] = ["OPEN", "RESOLVED", "CLOSED"];
+const TICKET_CATEGORIES: TicketCategory[] = [
+  "GENERAL_QUESTION",
+  "TECHNICAL_QUESTION",
+  "REFUND_QUESTION",
+];
+
 router.get("/", async (req, res) => {
   const { status, category } = req.query as {
     status?: TicketStatus;
@@ -45,9 +52,19 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   const { status, category, assignedToId } = req.body as {
     status?: TicketStatus;
-    category?: TicketCategory;
+    category?: TicketCategory | null;
     assignedToId?: string | null;
   };
+
+  if (status !== undefined && !TICKET_STATUSES.includes(status)) {
+    res.status(400).json({ error: "Invalid status" });
+    return;
+  }
+
+  if (category !== undefined && category !== null && !TICKET_CATEGORIES.includes(category)) {
+    res.status(400).json({ error: "Invalid category" });
+    return;
+  }
 
   if (assignedToId) {
     const assignee = await db.user.findUnique({ where: { id: assignedToId } });
@@ -60,8 +77,8 @@ router.patch("/:id", async (req, res) => {
   const ticket = await db.ticket.update({
     where: { id: req.params.id },
     data: {
-      ...(status && { status }),
-      ...(category && { category }),
+      ...(status !== undefined && { status }),
+      ...(category !== undefined && { category }),
       ...(assignedToId !== undefined && { assignedToId }),
     },
   });

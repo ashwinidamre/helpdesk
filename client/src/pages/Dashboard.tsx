@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import type { Ticket, TicketStatus, TicketCategory, User } from "../types";
+import type { User } from "../types";
+import type { Ticket, TicketStatus, TicketCategory } from "../types/ticket";
 
 const STATUS_BADGE: Record<TicketStatus, string> = {
   OPEN: "bg-blue-100 text-blue-700",

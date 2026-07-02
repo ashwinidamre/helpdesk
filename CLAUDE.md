@@ -108,7 +108,11 @@ This is a Bun workspace monorepo with two packages: `server/` and `client/`.
 - All fetch calls go through `src/lib/api.ts`, which always sends `credentials: "include"` (required for the session cookie).
 - Auth state lives in a `["me"]` query in `App.tsx`. Every protected route checks `user` from that query — no separate auth context or store.
 - `App.tsx` also polls `/api/health` every 30 seconds and shows a status banner at the top of the page.
-- Client-side types in `src/types/index.ts` mirror the Prisma enums (`TicketStatus`, `TicketCategory`, `Role`).
+- Client-side types mirror the Prisma enums (`TicketStatus`, `TicketCategory`, `Role`). `src/types/ticket.ts` is the single reusable source for the ticket domain (`Ticket`, `TicketStatus`, `TicketCategory`, `Reply`, `TicketWithReplies`) — every ticket-related file imports from it directly rather than redeclaring shapes. `src/types/index.ts` holds the remaining non-ticket types (`User`, `Role`, `AssignableUser`).
+- `src/lib/ticketQueries.ts` exports `invalidateTicketQueries(queryClient, id)`, a shared helper that invalidates both the `["ticket", id]` and `["tickets"]` TanStack Query caches. Used as the `onSuccess` handler by every ticket-mutating mutation in `TicketDetail.tsx` (status, category, assignment, reply) so list and detail views stay in sync without repeating the invalidation pair.
+- `src/lib/ticketLabels.ts` exports the shared `STATUS_BADGE`, `STATUS_LABEL`, `CATEGORY_LABEL` display maps, used by both `TicketDetail.tsx` (dropdown option text) and `components/TicketDetailCard.tsx` (badges).
+- `src/components/TicketDetailCard.tsx` renders a ticket's read-only basics — subject, status/category badges, sender, date, message body — from a plain `Ticket`, not `TicketWithReplies`, so it structurally cannot render the reply thread. Used by `TicketDetail.tsx`; the reply list and reply form stay separate, further down the page.
+- `src/components/UpdateTicket.tsx` is the right column of `TicketDetail.tsx` — the Status, Category, and Assigned-to dropdowns. It owns the category/assignment mutations and the `/users/assignable` query itself; `statusMutation` is passed in as a prop from `TicketDetail.tsx` because the page's "Close ticket" button (in the reply form) also drives it.
 
 #### Client routes
 
