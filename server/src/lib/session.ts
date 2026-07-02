@@ -27,7 +27,7 @@ export async function getSession(req: Request) {
     include: { user: true },
   });
 
-  if (!session || session.expiresAt < new Date()) {
+  if (!session || session.expiresAt < new Date() || session.user.deletedAt) {
     if (session) await db.session.delete({ where: { id: sessionId } });
     return null;
   }

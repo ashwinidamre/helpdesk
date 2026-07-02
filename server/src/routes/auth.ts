@@ -14,7 +14,7 @@ router.post("/login", async (req, res) => {
   }
 
   const user = await db.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  if (!user || user.deletedAt || !(await bcrypt.compare(password, user.password))) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }

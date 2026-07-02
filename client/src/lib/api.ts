@@ -1,25 +1,27 @@
-const BASE = "/api";
+import axios, { isAxiosError } from "axios";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
+const client = axios.create({
+  baseURL: "/api",
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
+});
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error: string }).error ?? "Request failed");
+async function request<T>(path: string, config?: Parameters<typeof client.request>[0]): Promise<T> {
+  try {
+    const res = await client.request<T>({ url: path, ...config });
+    return res.data;
+  } catch (err) {
+    if (isAxiosError(err)) {
+      const message = (err.response?.data as { error?: string } | undefined)?.error;
+      throw new Error(message ?? err.message ?? "Request failed");
+    }
+    throw err;
   }
-
-  return res.json() as Promise<T>;
 }
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
-  patch: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+  post: <T>(path: string, body: unknown) => request<T>(path, { method: "POST", data: body }),
+  patch: <T>(path: string, body: unknown) => request<T>(path, { method: "PATCH", data: body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };

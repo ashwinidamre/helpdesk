@@ -4,6 +4,7 @@ import { api } from "./lib/api";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TicketDetail from "./pages/TicketDetail";
+import Users from "./pages/Users";
 import type { User } from "./types";
 
 export default function App() {
@@ -58,6 +59,18 @@ export default function App() {
         <Route
           path="/tickets/:id"
           element={user ? <TicketDetail user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/users"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.role === "ADMIN" ? (
+              <Users user={user} />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          }
         />
         <Route
           path="*"
