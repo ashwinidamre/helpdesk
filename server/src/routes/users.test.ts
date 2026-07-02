@@ -2,7 +2,10 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 import type { Request, Response } from "express";
 
 const mockDb = {
-  user: { findMany: mock() },
+  user: { findMany: mock(), findUnique: mock(), update: mock() },
+  session: { deleteMany: mock() },
+  ticket: { updateMany: mock() },
+  $transaction: mock((ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 mock.module("../lib/db", () => ({ default: mockDb }));
@@ -79,5 +82,56 @@ describe("GET /api/users/assignable", () => {
     expect(layer.route.stack.length).toBeGreaterThanOrEqual(1);
     const middlewareNames = layer.route.stack.map((l: any) => l.handle.name);
     expect(middlewareNames).toContain("requireAuth");
+  });
+});
+
+describe("DELETE /api/users/:id", () => {
+  const handler = getHandler("delete", "/:id");
+
+  beforeEach(() => {
+    mockDb.user.findUnique.mockReset();
+    mockDb.user.update.mockReset();
+    mockDb.session.deleteMany.mockReset();
+    mockDb.ticket.updateMany.mockReset();
+    mockDb.$transaction.mockClear();
+  });
+
+  test("unassigns every ticket assigned to the deleted user", async () => {
+    mockDb.user.findUnique.mockResolvedValue({ id: "u1", role: "AGENT", deletedAt: null });
+    mockDb.user.update.mockResolvedValue({ id: "u1" });
+    mockDb.session.deleteMany.mockResolvedValue({ count: 0 });
+    mockDb.ticket.updateMany.mockResolvedValue({ count: 3 });
+    const req = { params: { id: "u1" } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(mockDb.ticket.updateMany).toHaveBeenCalledWith({
+      where: { assignedToId: "u1" },
+      data: { assignedToId: null },
+    });
+    expect(res.json).toHaveBeenCalledWith({ ok: true });
+  });
+
+  test("returns 404 for a user that doesn't exist and skips unassignment", async () => {
+    mockDb.user.findUnique.mockResolvedValue(null);
+    const req = { params: { id: "missing" } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockDb.ticket.updateMany).not.toHaveBeenCalled();
+  });
+
+  test("refuses to delete an admin and skips unassignment", async () => {
+    mockDb.user.findUnique.mockResolvedValue({ id: "u1", role: "ADMIN", deletedAt: null });
+    const req = { params: { id: "u1" } } as any;
+    const res = mockRes();
+
+    await handler(req, res, () => {});
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockDb.ticket.updateMany).not.toHaveBeenCalled();
   });
 });

@@ -97,6 +97,7 @@ router.delete("/:id", async (req, res) => {
   await db.$transaction([
     db.user.update({ where: { id: target.id }, data: { deletedAt: new Date() } }),
     db.session.deleteMany({ where: { userId: target.id } }),
+    db.ticket.updateMany({ where: { assignedToId: target.id }, data: { assignedToId: null } }),
   ]);
 
   res.json({ ok: true });
