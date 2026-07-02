@@ -26,6 +26,12 @@ export interface Ticket {
   updatedAt: string;
 }
 
+export interface AssignableUser {
+  id: string;
+  name: string;
+  role: Role;
+}
+
 export interface Reply {
   id: string;
   body: string;

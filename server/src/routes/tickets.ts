@@ -49,6 +49,14 @@ router.patch("/:id", async (req, res) => {
     assignedToId?: string | null;
   };
 
+  if (assignedToId) {
+    const assignee = await db.user.findUnique({ where: { id: assignedToId } });
+    if (!assignee || assignee.deletedAt) {
+      res.status(400).json({ error: "Invalid assignedToId" });
+      return;
+    }
+  }
+
   const ticket = await db.ticket.update({
     where: { id: req.params.id },
     data: {

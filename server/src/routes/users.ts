@@ -1,9 +1,18 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import db from "../lib/db";
-import { requireAdmin } from "../middleware/requireAuth";
+import { requireAdmin, requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
+
+router.get("/assignable", requireAuth, async (_req, res) => {
+  const users = await db.user.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true, role: true },
+    orderBy: { name: "asc" },
+  });
+  res.json(users);
+});
 
 router.use(requireAdmin);
 

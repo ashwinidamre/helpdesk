@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import type { TicketStatus, TicketWithReplies, User } from "../types";
+import type { AssignableUser, TicketStatus, TicketWithReplies, User } from "../types";
 
 const replySchema = z.object({
   body: z.string().trim().min(1, "Reply cannot be empty"),
@@ -38,6 +38,20 @@ export default function TicketDetail({ user: _user }: Props) {
   const { data: ticket, isLoading } = useQuery<TicketWithReplies>({
     queryKey: ["ticket", id],
     queryFn: () => api.get<TicketWithReplies>(`/tickets/${id}`),
+  });
+
+  const { data: assignableUsers = [] } = useQuery<AssignableUser[]>({
+    queryKey: ["assignable-users"],
+    queryFn: () => api.get<AssignableUser[]>("/users/assignable"),
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: (assignedToId: string | null) =>
+      api.patch(`/tickets/${id}`, { assignedToId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
   });
 
   const replyMutation = useMutation({
@@ -102,6 +116,32 @@ export default function TicketDetail({ user: _user }: Props) {
             </span>
           </div>
           <p className="whitespace-pre-wrap text-sm text-gray-700">{ticket.body}</p>
+          <div className="mt-4 flex items-center gap-2 border-t border-gray-100 pt-4">
+            <label htmlFor="assignedTo" className="text-xs font-medium text-gray-500">
+              Assigned to
+            </label>
+            <select
+              id="assignedTo"
+              value={ticket.assignedTo?.id ?? ""}
+              onChange={(e) => assignMutation.mutate(e.target.value || null)}
+              disabled={assignMutation.isPending}
+              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none disabled:opacity-50"
+            >
+              <option value="">Unassigned</option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            {assignMutation.isError && (
+              <span className="text-xs text-red-600">
+                {assignMutation.error instanceof Error
+                  ? assignMutation.error.message
+                  : "Failed to assign ticket"}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* AI summary */}

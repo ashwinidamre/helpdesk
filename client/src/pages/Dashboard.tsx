@@ -125,6 +125,7 @@ export default function Dashboard({ user }: Props) {
                   <th className="px-4 py-3">Sender</th>
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Assigned</th>
                   <th className="px-4 py-3">Created</th>
                 </tr>
               </thead>
@@ -149,6 +150,9 @@ export default function Dashboard({ user }: Props) {
                       >
                         {t.status.charAt(0) + t.status.slice(1).toLowerCase()}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {t.assignedTo?.name ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-400">
                       {new Date(t.createdAt).toLocaleDateString()}
