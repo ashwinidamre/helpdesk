@@ -1,3 +1,4 @@
+import path from "path";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -26,6 +27,17 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/email", emailRoutes);
+
+// In production the client build is served from the same origin as the API
+// (rather than a separate static host) so the session cookie, which is
+// sameSite: "lax", is always first-party — see src/lib/session.ts.
+if (process.env.NODE_ENV === "production") {
+  const clientDist = path.join(import.meta.dir, "../../client/dist");
+  app.use(express.static(clientDist));
+  app.get(/^\/(?!api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 Sentry.setupExpressErrorHandler(app);
 

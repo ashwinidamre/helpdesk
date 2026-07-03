@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+python-server
+client/dist
+server/dist
+*.log
+.env
+.env.*
+!.env.example
+.claude
+.agents
+.venv
+**/.venv

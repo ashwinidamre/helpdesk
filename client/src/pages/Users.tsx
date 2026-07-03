@@ -4,11 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Users as UsersIcon } from "lucide-react";
 import { api } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Skeleton from "../components/Skeleton";
+import EmptyState from "../components/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -148,13 +150,13 @@ export default function Users({ user: currentUser }: Props) {
   const isPending = createMutation.isPending || editMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center gap-4">
-          <Link to="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">
+          <Link to="/dashboard" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             &larr; Back
           </Link>
-          <h1 className="text-lg font-semibold text-gray-900">Users</h1>
+          <h1 className="font-serif text-lg font-semibold text-foreground">Users</h1>
         </div>
       </header>
 
@@ -171,12 +173,12 @@ export default function Users({ user: currentUser }: Props) {
                   <div className="grid gap-2">
                     <Label htmlFor="name">Name</Label>
                     <Input id="name" type="text" {...register("name")} />
-                    {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+                    {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" {...register("email")} />
-                    {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="password">Password</Label>
@@ -187,7 +189,7 @@ export default function Users({ user: currentUser }: Props) {
                       {...register("password")}
                     />
                     {errors.password && (
-                      <p className="text-sm text-red-600">{errors.password.message}</p>
+                      <p className="text-sm text-destructive">{errors.password.message}</p>
                     )}
                   </div>
                 </div>
@@ -202,13 +204,24 @@ export default function Users({ user: currentUser }: Props) {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-gray-400">Loading users...</p>
+          <div className="overflow-hidden rounded-[var(--radius)] border border-border bg-card shadow-card">
+            <div className="divide-y divide-border">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-6 px-4 py-4">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
+          </div>
         ) : users.length === 0 ? (
-          <p className="text-sm text-gray-400">No users found.</p>
+          <EmptyState icon={UsersIcon} title="No users yet" description="Add an agent to start assigning tickets." />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <div className="overflow-hidden rounded-[var(--radius)] border border-border bg-card shadow-card">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+              <thead className="border-b border-border bg-secondary/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Email</th>
@@ -217,13 +230,13 @@ export default function Users({ user: currentUser }: Props) {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{u.email}</td>
-                    <td className="px-4 py-3 text-gray-500">{u.role}</td>
-                    <td className="px-4 py-3 text-gray-400">
+                  <tr key={u.id} className="transition-colors hover:bg-secondary/40">
+                    <td className="px-4 py-3 font-medium text-foreground">{u.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{u.role}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
@@ -241,7 +254,7 @@ export default function Users({ user: currentUser }: Props) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-700"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
                             aria-label={`Delete ${u.name}`}
                             onClick={() => setDeleteTarget(u)}
                           >
@@ -269,7 +282,7 @@ export default function Users({ user: currentUser }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteMutation.isPending}
               onClick={(e) => {
                 e.preventDefault();

@@ -39,16 +39,16 @@ export default function TicketsPerDayChart({ data }: Props) {
   const hovered = hoverIndex != null ? data[hoverIndex] : null;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6">
-      <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+    <div className="rounded-[var(--radius)] border border-border bg-card p-6 shadow-card transition-shadow duration-200 hover:shadow-card-hover">
+      <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Tickets created per day (last 30 days)
       </h2>
 
       <div className="relative">
         {hovered && (
-          <div className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
-            <p className="font-semibold text-gray-900">{hovered.count.toLocaleString()} tickets</p>
-            <p className="text-gray-500">
+          <div className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 -translate-y-full rounded-md border border-border bg-card px-3 py-2 text-xs shadow-popover motion-safe:animate-fade-up">
+            <p className="font-semibold text-foreground">{hovered.count.toLocaleString()} tickets</p>
+            <p className="text-muted-foreground">
               {new Date(hovered.date + "T00:00:00").toLocaleDateString(undefined, {
                 weekday: "short",
                 month: "short",
@@ -60,7 +60,7 @@ export default function TicketsPerDayChart({ data }: Props) {
 
         <div className="flex">
           <div
-            className="mr-2 flex flex-col justify-between text-right text-[10px] leading-none text-gray-400"
+            className="mr-2 flex flex-col justify-between text-right text-[10px] leading-none text-muted-foreground"
             style={{ height: CHART_HEIGHT }}
           >
             {gridlineValues.map((v, i) => (
@@ -74,7 +74,7 @@ export default function TicketsPerDayChart({ data }: Props) {
               style={{ height: CHART_HEIGHT }}
             >
               {gridlineValues.map((v, i) => (
-                <div key={i} className="border-t border-gray-100" />
+                <div key={i} className="border-t border-border/60" />
               ))}
             </div>
 
@@ -94,12 +94,13 @@ export default function TicketsPerDayChart({ data }: Props) {
                     aria-label={`${d.count} tickets on ${d.date}`}
                   >
                     <div
-                      className="absolute bottom-0 left-1/2 rounded-t"
+                      className="absolute bottom-0 left-1/2 rounded-t transition-[height,filter] duration-200"
                       style={{
                         height: `${heightPct}%`,
                         width: `min(100%, ${BAR_MAX_WIDTH}px)`,
                         transform: "translateX(-50%)",
-                        backgroundColor: isHovered ? "#1c5cab" : "#2a78d6",
+                        backgroundImage: "linear-gradient(180deg, #2E8A73 0%, #1F6F5C 100%)",
+                        filter: isHovered ? "brightness(0.85)" : "brightness(1)",
                       }}
                     />
                   </div>
@@ -111,7 +112,7 @@ export default function TicketsPerDayChart({ data }: Props) {
 
         <div className="ml-8 mt-2 flex">
           {data.map((d, i) => (
-            <div key={d.date} className="flex-1 text-center text-[10px] text-gray-400">
+            <div key={d.date} className="flex-1 text-center text-[10px] text-muted-foreground">
               {i === 0 || i === data.length - 1 || i % 5 === 0 ? formatDateLabel(d.date) : ""}
             </div>
           ))}

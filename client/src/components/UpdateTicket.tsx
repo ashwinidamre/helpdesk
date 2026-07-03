@@ -31,16 +31,19 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
     onSuccess: () => invalidateTicketQueries(queryClient, ticket.id),
   });
 
+  const selectClass =
+    "w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring disabled:opacity-50";
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <div className="rounded-[var(--radius)] border border-border bg-card p-6 shadow-card">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Details
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="status" className="mb-1 block text-xs font-medium text-gray-500">
+            <label htmlFor="status" className="mb-1 block text-xs font-medium text-muted-foreground">
               Status
             </label>
             <select
@@ -48,7 +51,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
               value={ticket.status}
               onChange={(e) => statusMutation.mutate(e.target.value as TicketStatus)}
               disabled={statusMutation.isPending}
-              className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none disabled:opacity-50"
+              className={selectClass}
             >
               {!MANUAL_TICKET_STATUSES.includes(ticket.status) && (
                 <option value={ticket.status} disabled>
@@ -62,7 +65,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
               ))}
             </select>
             {statusMutation.isError && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-destructive">
                 {statusMutation.error instanceof Error
                   ? statusMutation.error.message
                   : "Failed to update status"}
@@ -71,7 +74,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
           </div>
 
           <div>
-            <label htmlFor="category" className="mb-1 block text-xs font-medium text-gray-500">
+            <label htmlFor="category" className="mb-1 block text-xs font-medium text-muted-foreground">
               Category
             </label>
             <select
@@ -81,7 +84,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
                 categoryMutation.mutate((e.target.value || null) as TicketCategory | null)
               }
               disabled={categoryMutation.isPending}
-              className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none disabled:opacity-50"
+              className={selectClass}
             >
               <option value="">Uncategorized</option>
               {(Object.keys(CATEGORY_LABEL) as TicketCategory[]).map((c) => (
@@ -91,7 +94,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
               ))}
             </select>
             {categoryMutation.isError && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-destructive">
                 {categoryMutation.error instanceof Error
                   ? categoryMutation.error.message
                   : "Failed to update category"}
@@ -100,7 +103,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
           </div>
 
           <div>
-            <label htmlFor="assignedTo" className="mb-1 block text-xs font-medium text-gray-500">
+            <label htmlFor="assignedTo" className="mb-1 block text-xs font-medium text-muted-foreground">
               Assigned to
             </label>
             <select
@@ -108,7 +111,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
               value={ticket.assignedTo?.id ?? ""}
               onChange={(e) => assignMutation.mutate(e.target.value || null)}
               disabled={assignMutation.isPending}
-              className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none disabled:opacity-50"
+              className={selectClass}
             >
               <option value="">Unassigned</option>
               {assignableUsers.map((u) => (
@@ -118,7 +121,7 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
               ))}
             </select>
             {assignMutation.isError && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-destructive">
                 {assignMutation.error instanceof Error
                   ? assignMutation.error.message
                   : "Failed to assign ticket"}

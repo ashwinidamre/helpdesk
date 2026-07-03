@@ -21,7 +21,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center text-gray-400">
+      <div className="flex h-screen items-center justify-center bg-background font-serif text-muted-foreground">
         Loading...
       </div>
     );
@@ -32,12 +32,12 @@ export default function App() {
   return (
     <>
       <div
-        className={`px-4 py-1.5 text-center text-xs font-medium ${
+        className={`px-4 py-1.5 text-center text-xs font-medium transition-colors duration-300 ${
           health === undefined
-            ? "bg-yellow-50 text-yellow-700"
+            ? "bg-brass/10 text-brass"
             : serverOk
-            ? "bg-green-50 text-green-700"
-            : "bg-red-50 text-red-700"
+            ? "bg-forest/10 text-forest"
+            : "bg-destructive/10 text-destructive"
         }`}
       >
         {health === undefined

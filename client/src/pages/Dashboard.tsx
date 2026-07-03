@@ -1,24 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Mail, Inbox } from "lucide-react";
 import { api } from "../lib/api";
+import { STATUS_BADGE, STATUS_LABEL, CATEGORY_LABEL } from "../lib/ticketLabels";
+import AiSeal from "../components/AiSeal";
+import Skeleton from "../components/Skeleton";
+import EmptyState from "../components/EmptyState";
 import TicketsPerDayChart from "../components/TicketsPerDayChart";
 import type { User } from "../types";
 import type { Ticket, TicketStatus, TicketCategory } from "../types/ticket";
-
-const STATUS_BADGE: Record<TicketStatus, string> = {
-  NEW: "bg-purple-100 text-purple-700",
-  PROCESSING: "bg-yellow-100 text-yellow-700",
-  OPEN: "bg-blue-100 text-blue-700",
-  RESOLVED: "bg-green-100 text-green-700",
-  CLOSED: "bg-gray-100 text-gray-600",
-};
-
-const CATEGORY_LABEL: Record<TicketCategory, string> = {
-  GENERAL_QUESTION: "General",
-  TECHNICAL_QUESTION: "Technical",
-  REFUND_QUESTION: "Refund",
-};
 
 const PAGE_SIZE = 10;
 
@@ -47,6 +38,14 @@ function formatDuration(ms: number): string {
   if (hours < 24) return `${hours.toFixed(1)}h`;
   return `${(hours / 24).toFixed(1)}d`;
 }
+
+function snippet(body: string, max = 88): string {
+  const clean = body.replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max)}…` : clean;
+}
+
+const fieldClass =
+  "rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring";
 
 export default function Dashboard({ user }: Props) {
   const [status, setStatus] = useState<StatusFilter>("");
@@ -114,26 +113,29 @@ export default function Dashboard({ user }: Props) {
     queryClient.setQueryData(["me"], null);
   }
 
+  const statTileClass =
+    "rounded-[var(--radius)] border border-border bg-card p-4 shadow-card transition-all duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-card-hover";
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-20 border-b border-border bg-card/90 px-6 py-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Link to="/dashboard" className="text-lg font-semibold text-gray-900">
+          <Link to="/dashboard" className="font-serif text-lg font-semibold text-foreground">
             Helpdesk
           </Link>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">{user.name}</span>
+            <span className="text-sm text-muted-foreground">{user.name}</span>
             {user.role === "ADMIN" && (
               <Link
                 to="/users"
-                className="text-sm text-gray-500 hover:text-gray-700"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 Users
               </Link>
             )}
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Sign out
             </button>
@@ -143,29 +145,45 @@ export default function Dashboard({ user }: Props) {
 
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs text-gray-500">Total tickets</p>
-            <p className="mt-1 text-2xl font-semibold text-gray-900">
-              {stats ? stats.totalTickets.toLocaleString() : "—"}
-            </p>
+          <div className={statTileClass}>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total tickets</p>
+            {stats ? (
+              <p className="mt-1 font-serif text-2xl font-semibold text-foreground">
+                {stats.totalTickets.toLocaleString()}
+              </p>
+            ) : (
+              <Skeleton className="mt-2 h-7 w-14" />
+            )}
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs text-gray-500">Open tickets</p>
-            <p className="mt-1 text-2xl font-semibold text-gray-900">
-              {stats ? stats.openTickets.toLocaleString() : "—"}
-            </p>
+          <div className={statTileClass}>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Open tickets</p>
+            {stats ? (
+              <p className="mt-1 font-serif text-2xl font-semibold text-foreground">
+                {stats.openTickets.toLocaleString()}
+              </p>
+            ) : (
+              <Skeleton className="mt-2 h-7 w-14" />
+            )}
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs text-gray-500">Resolved by AI</p>
-            <p className="mt-1 text-2xl font-semibold text-gray-900">
-              {stats ? `${stats.resolvedByAiPercent.toFixed(1)}%` : "—"}
-            </p>
+          <div className={statTileClass}>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Resolved by AI</p>
+            {stats ? (
+              <p className="mt-1 font-serif text-2xl font-semibold text-brass">
+                {stats.resolvedByAiPercent.toFixed(1)}%
+              </p>
+            ) : (
+              <Skeleton className="mt-2 h-7 w-14" />
+            )}
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs text-gray-500">Avg. resolution time</p>
-            <p className="mt-1 text-2xl font-semibold text-gray-900">
-              {stats?.avgResolutionTimeMs != null ? formatDuration(stats.avgResolutionTimeMs) : "—"}
-            </p>
+          <div className={statTileClass}>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Avg. resolution time</p>
+            {stats ? (
+              <p className="mt-1 font-serif text-2xl font-semibold text-foreground">
+                {stats.avgResolutionTimeMs != null ? formatDuration(stats.avgResolutionTimeMs) : "—"}
+              </p>
+            ) : (
+              <Skeleton className="mt-2 h-7 w-14" />
+            )}
           </div>
         </div>
 
@@ -173,18 +191,18 @@ export default function Dashboard({ user }: Props) {
           <TicketsPerDayChart data={dailyCounts} />
         </div>
 
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-6 flex flex-wrap items-center gap-3">
           <input
             type="text"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search tickets..."
-            className="w-64 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+            className={`w-64 ${fieldClass}`}
           />
           <select
             value={status}
             onChange={(e) => handleStatusChange(e.target.value as StatusFilter)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+            className={fieldClass}
           >
             <option value="">All statuses</option>
             <option value="NEW">New</option>
@@ -197,7 +215,7 @@ export default function Dashboard({ user }: Props) {
           <select
             value={category}
             onChange={(e) => handleCategoryChange(e.target.value as TicketCategory | "")}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+            className={fieldClass}
           >
             <option value="">All categories</option>
             <option value="GENERAL_QUESTION">General</option>
@@ -207,60 +225,80 @@ export default function Dashboard({ user }: Props) {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-gray-400">Loading tickets...</p>
+          <div className="overflow-hidden rounded-[var(--radius)] border border-border bg-card shadow-card">
+            <ul className="divide-y divide-border">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <li key={i} className="flex items-start gap-4 px-4 py-4">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-40" />
+                    <Skeleton className="h-4 w-64" />
+                    <Skeleton className="h-3 w-80" />
+                  </div>
+                  <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : tickets.length === 0 ? (
-          <p className="text-sm text-gray-400">No tickets found.</p>
+          <EmptyState
+            icon={Inbox}
+            title="No tickets found"
+            description="Nothing matches these filters. Try widening your search or clearing a filter."
+          />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                <tr>
-                  <th className="px-4 py-3">Subject</th>
-                  <th className="px-4 py-3">Sender</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Assigned</th>
-                  <th className="px-4 py-3">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginatedTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/tickets/${t.id}`}
-                        className="font-medium text-gray-900 hover:text-blue-600"
-                      >
-                        {t.subject}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{t.senderEmail}</td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {t.category ? CATEGORY_LABEL[t.category] : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[t.status]}`}
-                      >
-                        {t.status.charAt(0) + t.status.slice(1).toLowerCase()}
-                      </span>
-                      {t.resolvedByAi && (
-                        <span className="ml-1 inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
-                          Resolved by AI
+          <div className="overflow-hidden rounded-[var(--radius)] border border-border bg-card shadow-card">
+            <ul className="divide-y divide-border">
+              {paginatedTickets.map((t, i) => (
+                <li
+                  key={t.id}
+                  className="animate-fade-up motion-reduce:animate-none"
+                  style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+                >
+                  <Link
+                    to={`/tickets/${t.id}`}
+                    className="flex items-start gap-4 px-4 py-4 transition-colors hover:bg-secondary/60"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                      <Mail className="h-4 w-4" />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="truncate text-xs text-muted-foreground">
+                          {t.senderEmail}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {t.assignedTo?.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400">
-                      {new Date(t.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {new Date(t.createdAt).toLocaleDateString()}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 block truncate font-serif text-base font-semibold text-foreground">
+                        {t.subject}
+                      </span>
+                      <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+                        {snippet(t.body)}
+                      </span>
+                    </span>
+
+                    <span className="flex shrink-0 flex-col items-end gap-1.5 pl-2">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[t.status]}`}
+                        >
+                          {STATUS_LABEL[t.status]}
+                        </span>
+                        {t.resolvedByAi && <AiSeal label={false} />}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {t.category ? CATEGORY_LABEL[t.category] : "Uncategorized"}
+                        {t.assignedTo ? ` · ${t.assignedTo.name}` : ""}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
               <span>
                 Page {currentPage} of {totalPages} ({tickets.length} tickets)
               </span>
@@ -268,14 +306,14 @@ export default function Dashboard({ user }: Props) {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-md border border-input px-3 py-1.5 text-sm transition-colors hover:bg-secondary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-md border border-input px-3 py-1.5 text-sm transition-colors hover:bg-secondary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
                 </button>

@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 
 function ErrorFallback() {
   return (
-    <div className="flex h-screen items-center justify-center text-sm text-gray-500">
+    <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">
       Something went wrong. Please refresh the page.
     </div>
   );

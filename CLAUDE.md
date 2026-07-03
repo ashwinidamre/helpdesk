@@ -80,7 +80,24 @@ DATABASE_URL="postgresql://user:password@localhost:5432/helpdesk"
 CLIENT_URL="http://localhost:5173"
 NODE_ENV="development"
 EMAIL_WEBHOOK_SECRET="change-me"   # shared secret required by POST /api/email/inbound
+GOOGLE_GENERATIVE_AI_API_KEY="AIza..."   # Gemini key used by classifyTicket/autoResolveTicket/summarize/polish-reply
+SENTRY_DSN=""   # optional; Sentry.init is skipped when unset
 ```
+
+`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_ROLE` are only read by `db:seed`, not at server runtime.
+
+## Deployment (Railway)
+
+The repo root `Dockerfile` builds a single image that serves **both** the API and the built client from one origin. This is deliberate, not incidental: the session cookie is `sameSite: "lax"` (`src/lib/session.ts`), which browsers won't attach to cross-site fetch/XHR requests — splitting client and server across two Railway services (two subdomains) would silently break login. `app.ts` serves `client/dist` as static files and falls back to `client/dist/index.html` for any non-`/api` path when `NODE_ENV=production`, so client-side routes (e.g. `/tickets/:id`) resolve correctly on refresh.
+
+Prisma's CLI enforces a Node-version check that neither Bun's runtime nor an unpinned `bunx prisma <cmd>` reliably satisfies — `bunx` invoked without an existing local resolution context can even resolve a completely different major version (v7, which has a breaking schema syntax change) instead of this project's pinned v5. To avoid both problems, the Dockerfile installs a real Node 22 via NodeSource for build-time `prisma generate`, and both `generate` and `migrate deploy` are invoked directly through the pinned local CLI (`node .../node_modules/prisma/build/index.js <cmd>`) rather than through `bunx`. The same pattern is used in `server/package.json`'s `db:*` scripts.
+
+`railway.json` points Railway at the Dockerfile explicitly and sets the healthcheck to `/api/health`. To deploy:
+
+1. Create a Railway project, add a **PostgreSQL** plugin, and a service from this repo (Railway auto-detects the root `Dockerfile`).
+2. Set service variables: `DATABASE_URL` (reference the Postgres plugin's `DATABASE_URL`), `CLIENT_URL` (this service's own public Railway domain — same-origin, so mainly used for the `cors()` origin check), `NODE_ENV=production`, `EMAIL_WEBHOOK_SECRET`, `GOOGLE_GENERATIVE_AI_API_KEY`, and optionally `SENTRY_DSN`. `PORT` is injected by Railway automatically (`src/index.ts` already reads `process.env.PORT`).
+3. On deploy, the container's `CMD` runs `prisma migrate deploy` against `DATABASE_URL` before starting the server — no separate migration step needed.
+4. `auth-server/` and `python-server/` are separate, undeployed experiments; they're not part of this build (see `.dockerignore` / the Dockerfile's `COPY . .` + explicit build steps).
 
 ## Architecture
 

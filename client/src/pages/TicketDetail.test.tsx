@@ -27,6 +27,7 @@ const baseTicket: TicketWithReplies = {
   status: "OPEN",
   category: null,
   aiSummary: null,
+  resolvedByAi: false,
   assignedTo: null,
   createdAt: "2026-07-01T10:00:00.000Z",
   updatedAt: "2026-07-01T10:00:00.000Z",
@@ -67,7 +68,7 @@ describe("TicketDetail", () => {
     mockGetHandlers(baseTicket);
     renderPage();
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading ticket" })).toBeInTheDocument();
   });
 
   test("renders the ticket's basic details once loaded", async () => {

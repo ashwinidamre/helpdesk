@@ -1,11 +1,11 @@
 import type { TicketCategory, TicketStatus } from "../types/ticket";
 
 export const STATUS_BADGE: Record<TicketStatus, string> = {
-  NEW: "bg-purple-100 text-purple-700",
-  PROCESSING: "bg-yellow-100 text-yellow-700",
-  OPEN: "bg-blue-100 text-blue-700",
-  RESOLVED: "bg-green-100 text-green-700",
-  CLOSED: "bg-gray-100 text-gray-600",
+  NEW: "bg-wine/10 text-wine",
+  PROCESSING: "bg-brass/10 text-brass",
+  OPEN: "bg-forest/10 text-forest",
+  RESOLVED: "bg-forest-light/10 text-forest-light",
+  CLOSED: "bg-ink/5 text-ash",
 };
 
 export const STATUS_LABEL: Record<TicketStatus, string> = {

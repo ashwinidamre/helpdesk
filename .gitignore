@@ -4,3 +4,4 @@ dist/
 .env.local
 *.db
 bun.lock
+.claude/settings.local.json

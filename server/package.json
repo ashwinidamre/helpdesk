@@ -3,14 +3,16 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "bun --hot src/index.ts",
+    "start": "bun src/index.ts",
     "test": "bun test",
     "build": "bun build src/index.ts --outdir dist --target bun",
-    "db:migrate": "bunx prisma migrate dev",
-    "db:generate": "bunx prisma generate",
+    "db:migrate": "node node_modules/prisma/build/index.js migrate dev",
+    "db:migrate:deploy": "node node_modules/prisma/build/index.js migrate deploy",
+    "db:generate": "node node_modules/prisma/build/index.js generate",
     "db:seed": "bun prisma/seed.ts",
     "db:seed:tickets": "bun prisma/seed-tickets.ts",
     "db:seed:ai-agent": "bun prisma/seed-ai-agent.ts",
-    "db:studio": "bunx prisma studio"
+    "db:studio": "node node_modules/prisma/build/index.js studio"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.11",
