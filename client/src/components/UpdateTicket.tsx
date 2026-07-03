@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { invalidateTicketQueries } from "../lib/ticketQueries";
-import { STATUS_LABEL, CATEGORY_LABEL } from "../lib/ticketLabels";
+import { STATUS_LABEL, CATEGORY_LABEL, MANUAL_TICKET_STATUSES } from "../lib/ticketLabels";
 import type { AssignableUser } from "../types";
 import type { Ticket, TicketCategory, TicketStatus } from "../types/ticket";
 
@@ -50,7 +50,12 @@ export default function UpdateTicket({ ticket, statusMutation }: Props) {
               disabled={statusMutation.isPending}
               className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none disabled:opacity-50"
             >
-              {(Object.keys(STATUS_LABEL) as TicketStatus[]).map((s) => (
+              {!MANUAL_TICKET_STATUSES.includes(ticket.status) && (
+                <option value={ticket.status} disabled>
+                  {STATUS_LABEL[ticket.status]}
+                </option>
+              )}
+              {MANUAL_TICKET_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {STATUS_LABEL[s]}
                 </option>

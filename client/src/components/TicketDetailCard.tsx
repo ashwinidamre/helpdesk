@@ -20,6 +20,11 @@ export default function TicketDetailCard({ ticket }: Props) {
             {CATEGORY_LABEL[ticket.category]}
           </span>
         )}
+        {ticket.resolvedByAi && (
+          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+            Resolved by AI
+          </span>
+        )}
         <span className="text-xs text-gray-400">
           From {ticket.senderEmail} &middot; {new Date(ticket.createdAt).toLocaleString()}
         </span>

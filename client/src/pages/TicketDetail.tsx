@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import { api } from "../lib/api";
 import { invalidateTicketQueries } from "../lib/ticketQueries";
 import TicketDetailCard from "../components/TicketDetailCard";
@@ -65,6 +66,11 @@ export default function TicketDetail({ user: _user }: Props) {
     polishMutation.mutate(body);
   }
 
+  const summarizeMutation = useMutation({
+    mutationFn: () => api.post<{ aiSummary: string }>(`/tickets/${id}/summarize`, {}),
+    onSuccess: () => invalidateTicketQueries(queryClient, id),
+  });
+
   const statusMutation = useMutation({
     mutationFn: (status: TicketStatus) =>
       api.patch(`/tickets/${id}`, { status }),
@@ -99,14 +105,32 @@ export default function TicketDetail({ user: _user }: Props) {
             <TicketDetailCard ticket={ticket} />
 
             {/* AI summary */}
-            {ticket.aiSummary && (
-              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-500">
-                  AI Summary
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => summarizeMutation.mutate()}
+                disabled={summarizeMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+              >
+                <Sparkles className="h-4 w-4" />
+                {summarizeMutation.isPending ? "Summarizing..." : "Summarize"}
+              </button>
+
+              {summarizeMutation.isError && (
+                <p className="text-sm text-red-600">
+                  Failed to summarize ticket. Please try again.
                 </p>
-                <p className="text-sm text-blue-900">{ticket.aiSummary}</p>
-              </div>
-            )}
+              )}
+
+              {ticket.aiSummary && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-500">
+                    AI Summary
+                  </p>
+                  <p className="text-sm text-blue-900">{ticket.aiSummary}</p>
+                </div>
+              )}
+            </div>
 
             {/* Replies */}
             <ReplyThread replies={ticket.replies} />

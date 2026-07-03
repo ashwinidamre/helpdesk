@@ -13,6 +13,8 @@ enum Role {
 }
 
 enum TicketStatus {
+  NEW
+  PROCESSING
   OPEN
   RESOLVED
   CLOSED
@@ -53,9 +55,10 @@ model Ticket {
   body         String
   senderEmail  String
   senderName   String?
-  status       TicketStatus    @default(OPEN)
+  status       TicketStatus    @default(NEW)
   category     TicketCategory?
   aiSummary    String?
+  resolvedByAi Boolean         @default(false)
   assignedToId String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt

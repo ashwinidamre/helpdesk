@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import TicketsPerDayChart from "../components/TicketsPerDayChart";
 import type { User } from "../types";
 import type { Ticket, TicketStatus, TicketCategory } from "../types/ticket";
 
 const STATUS_BADGE: Record<TicketStatus, string> = {
+  NEW: "bg-purple-100 text-purple-700",
+  PROCESSING: "bg-yellow-100 text-yellow-700",
   OPEN: "bg-blue-100 text-blue-700",
   RESOLVED: "bg-green-100 text-green-700",
   CLOSED: "bg-gray-100 text-gray-600",
@@ -23,18 +26,62 @@ interface Props {
   user: User;
 }
 
+interface TicketStats {
+  totalTickets: number;
+  openTickets: number;
+  resolvedByAiPercent: number;
+  avgResolutionTimeMs: number | null;
+}
+
+interface DailyCount {
+  date: string;
+  count: number;
+}
+
+type StatusFilter = TicketStatus | "AI_RESOLVED" | "";
+
+function formatDuration(ms: number): string {
+  const minutes = ms / 60_000;
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${hours.toFixed(1)}h`;
+  return `${(hours / 24).toFixed(1)}d`;
+}
+
 export default function Dashboard({ user }: Props) {
-  const [status, setStatus] = useState<TicketStatus | "">("");
+  const [status, setStatus] = useState<StatusFilter>("");
   const [category, setCategory] = useState<TicketCategory | "">("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  const { data: stats } = useQuery<TicketStats>({
+    queryKey: ["ticket-stats"],
+    queryFn: () => api.get<TicketStats>("/tickets/stats"),
+  });
+
+  const { data: dailyCounts = [] } = useQuery<DailyCount[]>({
+    queryKey: ["ticket-stats-daily"],
+    queryFn: () => api.get<DailyCount[]>("/tickets/stats/daily"),
+  });
+
   const { data: tickets = [], isLoading } = useQuery<Ticket[]>({
-    queryKey: ["tickets", status, category],
+    queryKey: ["tickets", status, category, debouncedSearch],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (status) params.set("status", status);
+      if (status === "AI_RESOLVED") {
+        params.set("resolvedByAi", "true");
+      } else if (status) {
+        params.set("status", status);
+      }
       if (category) params.set("category", category);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       return api.get<Ticket[]>(`/tickets?${params.toString()}`);
     },
   });
@@ -46,13 +93,18 @@ export default function Dashboard({ user }: Props) {
     currentPage * PAGE_SIZE
   );
 
-  function handleStatusChange(value: TicketStatus | "") {
+  function handleStatusChange(value: StatusFilter) {
     setStatus(value);
     setPage(1);
   }
 
   function handleCategoryChange(value: TicketCategory | "") {
     setCategory(value);
+    setPage(1);
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
     setPage(1);
   }
 
@@ -90,16 +142,57 @@ export default function Dashboard({ user }: Props) {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
+        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <p className="text-xs text-gray-500">Total tickets</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-900">
+              {stats ? stats.totalTickets.toLocaleString() : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <p className="text-xs text-gray-500">Open tickets</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-900">
+              {stats ? stats.openTickets.toLocaleString() : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <p className="text-xs text-gray-500">Resolved by AI</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-900">
+              {stats ? `${stats.resolvedByAiPercent.toFixed(1)}%` : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <p className="text-xs text-gray-500">Avg. resolution time</p>
+            <p className="mt-1 text-2xl font-semibold text-gray-900">
+              {stats?.avgResolutionTimeMs != null ? formatDuration(stats.avgResolutionTimeMs) : "—"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <TicketsPerDayChart data={dailyCounts} />
+        </div>
+
         <div className="mb-6 flex items-center gap-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search tickets..."
+            className="w-64 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+          />
           <select
             value={status}
-            onChange={(e) => handleStatusChange(e.target.value as TicketStatus | "")}
+            onChange={(e) => handleStatusChange(e.target.value as StatusFilter)}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
           >
             <option value="">All statuses</option>
+            <option value="NEW">New</option>
+            <option value="PROCESSING">Processing</option>
             <option value="OPEN">Open</option>
             <option value="RESOLVED">Resolved</option>
             <option value="CLOSED">Closed</option>
+            <option value="AI_RESOLVED">Resolved by AI</option>
           </select>
           <select
             value={category}
@@ -151,6 +244,11 @@ export default function Dashboard({ user }: Props) {
                       >
                         {t.status.charAt(0) + t.status.slice(1).toLowerCase()}
                       </span>
+                      {t.resolvedByAi && (
+                        <span className="ml-1 inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          Resolved by AI
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       {t.assignedTo?.name ?? "—"}

@@ -1,4 +1,4 @@
-export type TicketStatus = "OPEN" | "RESOLVED" | "CLOSED";
+export type TicketStatus = "NEW" | "PROCESSING" | "OPEN" | "RESOLVED" | "CLOSED";
 export type TicketCategory =
   | "GENERAL_QUESTION"
   | "TECHNICAL_QUESTION"
@@ -13,6 +13,7 @@ export interface Ticket {
   status: TicketStatus;
   category: TicketCategory | null;
   aiSummary: string | null;
+  resolvedByAi: boolean;
   assignedTo: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;

@@ -6,7 +6,8 @@ export function verifyEmailWebhook(req: Request, res: Response, next: NextFuncti
     res.status(500).json({ error: "Email webhook is not configured" });
     return;
   }
-  if (req.get("x-webhook-secret") !== secret) {
+  const querySecret = typeof req.query.secret === "string" ? req.query.secret : undefined;
+  if (req.get("x-webhook-secret") !== secret && querySecret !== secret) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
