@@ -12,7 +12,10 @@
     "db:studio": "bunx prisma studio"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.11",
+    "@ai-sdk/openai": "^4.0.7",
     "@prisma/client": "^5.0.0",
+    "ai": "^7.0.14",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

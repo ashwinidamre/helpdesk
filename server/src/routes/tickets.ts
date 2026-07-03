@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
 import type { TicketStatus, TicketCategory } from "@prisma/client";
 import db from "../lib/db";
 import { requireAuth } from "../middleware/requireAuth";
@@ -99,6 +101,35 @@ router.post("/:id/reply", async (req, res) => {
   ]);
 
   res.status(201).json(reply);
+});
+
+router.post("/:id/polish-reply", async (req, res) => {
+  const { body } = req.body as { body: string };
+  if (!body?.trim()) {
+    res.status(400).json({ error: "Reply body required" });
+    return;
+  }
+
+  const ticket = await db.ticket.findUnique({ where: { id: req.params.id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-5-nano"),
+      system:
+        "You polish a support agent's draft reply to a customer ticket. " +
+        "Improve grammar, clarity, and tone (professional and friendly) without changing its meaning, " +
+        "adding new facts, or removing information. Respond with only the polished reply text.",
+      prompt: `Ticket subject: ${ticket.subject}\nCustomer message: ${ticket.body}\n\nAgent's draft reply:\n${body}`,
+    });
+    res.json({ body: text });
+  } catch (err) {
+    console.error(err);
+    res.status(502).json({ error: "Failed to polish reply" });
+  }
 });
 
 export default router;

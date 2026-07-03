@@ -28,6 +28,8 @@ export default function TicketDetail({ user: _user }: Props) {
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<ReplyFormValues>({
     resolver: zodResolver(replySchema),
@@ -49,6 +51,18 @@ export default function TicketDetail({ user: _user }: Props) {
 
   function onReplySubmit(data: ReplyFormValues) {
     replyMutation.mutate(data.body);
+  }
+
+  const polishMutation = useMutation({
+    mutationFn: (body: string) =>
+      api.post<{ body: string }>(`/tickets/${id}/polish-reply`, { body }),
+    onSuccess: (data) => setValue("body", data.body),
+  });
+
+  function onPolishClick() {
+    const body = getValues("body").trim();
+    if (!body) return;
+    polishMutation.mutate(body);
   }
 
   const statusMutation = useMutation({
@@ -121,6 +135,14 @@ export default function TicketDetail({ user: _user }: Props) {
                   <p className="mt-1 text-sm text-red-600">{errors.body.message}</p>
                 )}
                 <div className="mt-3 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={onPolishClick}
+                    disabled={polishMutation.isPending}
+                    className="rounded-lg border border-blue-300 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    {polishMutation.isPending ? "Polishing..." : "Polish"}
+                  </button>
                   <button
                     type="submit"
                     disabled={replyMutation.isPending}
