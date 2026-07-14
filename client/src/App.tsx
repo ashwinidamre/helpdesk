@@ -13,12 +13,6 @@ export default function App() {
     queryFn: () => api.get("/auth/me"),
   });
 
-  const { data: health } = useQuery<{ status: string }>({
-    queryKey: ["health"],
-    queryFn: () => api.get("/health"),
-    refetchInterval: 30_000,
-  });
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background font-serif text-muted-foreground">
@@ -27,25 +21,7 @@ export default function App() {
     );
   }
 
-  const serverOk = health?.status === "ok";
-
   return (
-    <>
-      <div
-        className={`px-4 py-1.5 text-center text-xs font-medium transition-colors duration-300 ${
-          health === undefined
-            ? "bg-brass/10 text-brass"
-            : serverOk
-            ? "bg-forest/10 text-forest"
-            : "bg-destructive/10 text-destructive"
-        }`}
-      >
-        {health === undefined
-          ? "Checking server status..."
-          : serverOk
-          ? "Server is online"
-          : "Server is offline"}
-      </div>
     <BrowserRouter>
       <Routes>
         <Route
@@ -78,6 +54,5 @@ export default function App() {
         />
       </Routes>
     </BrowserRouter>
-    </>
   );
 }
